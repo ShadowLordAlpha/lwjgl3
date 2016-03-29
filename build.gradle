@@ -2,148 +2,118 @@
  * Copyright LWJGL. All rights reserved.
  * License terms: http://lwjgl.org/license.php
  */
-project.buildDir = 'bin/MAVEN'
 
-apply plugin: "maven"
-apply plugin: "signing"
-
-project.group = "org.lwjgl"
-project.version = lwjglVersion
-
-def PATHS = [
-	release: 'bin/RELEASE'
-]
-
-// Set build variables based on build type (release, continuous integration, development)
-enum BuildType {
-	LOCAL,
-	SNAPSHOT,
-	RELEASE
-}
-
-class Deployment {
-	BuildType type
-	String repo
-	String user
-	String password
-}
-
-Deployment deployment;
-if ( hasProperty("release") ) {
-	deployment = new Deployment(
-		type: BuildType.RELEASE,
-		repo: "https://oss.sonatype.org/service/local/staging/deploy/maven2/",
-		user: sonatypeUsername,
-		password: sonatypePassword
-	)
-	println "Performing release build"
-} else if ( hasProperty("snapshot") ) {
-	project.version += "-SNAPSHOT"
-	deployment = new Deployment(
-		type: BuildType.SNAPSHOT,
-		repo: "https://oss.sonatype.org/content/repositories/snapshots/",
-		user: sonatypeUsername,
-		password: sonatypePassword
-	)
-	println "Performing snapshot build"
-} else {
-	deployment = new Deployment(
-		type: BuildType.LOCAL,
-		repo: repositories.mavenLocal().url
-	)
-}
-println "${deployment.type.name()} BUILD"
-
-artifacts {
-	archives file: file("$buildDir/lwjgl.jar"), name: "lwjgl", type: "jar"
-	archives file: file("$buildDir/src.jar"), name: "lwjgl", type: "jar", classifier: "sources"
-	archives file: file("$buildDir/javadoc.jar"), name: "lwjgl", type: "jar", classifier: "javadoc"
-	archives file: file("$buildDir/lwjgl-natives-windows.jar"), name: "lwjgl-platform", type: "jar", classifier: "natives-windows"
-	archives file: file("$buildDir/lwjgl-natives-macosx.jar"), name: "lwjgl-platform", type: "jar", classifier: "natives-osx"
-	archives file: file("$buildDir/lwjgl-natives-linux.jar"), name: "lwjgl-platform", type: "jar", classifier: "natives-linux"
-}
-
-if ( deployment.type == BuildType.RELEASE ) {
-	signing {
-		sign configurations.archives
-	}
-} else {
-	task signArchives {
-		// do nothing
-	}
-}
-
-def lwjglPOM = { String projectName, String packagingMethod ->
-	return {
-		project {
-			name projectName
-			packaging packagingMethod
-			description 'LWJGL'
-			url 'http://www.lwjgl.org'
-
-			scm {
-				url 'scm:git@github.com:LWJGL/lwjgl3.git'
-				connection 'scm:git@github.com:LWJGL/lwjgl3.git'
-				developerConnection 'scm:git@github.com:LWJGL/lwjgl3.git'
-			}
-
-			licenses {
-				license {
-					name 'BSD'
-					url 'http://www.lwjgl.org/license'
-					distribution 'repo'
-				}
-			}
-
-			developers {
-				developer {
-					id "spasi"
-					name "Ioannis Tsakpinis"
-				}
-			}
-		}
-	}
-}
-
-uploadArchives {
+/*
+ * This buildscrip allows gradle to use the kotlin plugin
+ */ 
+buildscript {
 	repositories {
-		mavenDeployer {
-			repository(url: deployment.repo) {
-				authentication(userName: deployment.user, password: deployment.password)
-			}
+		mavenCentral()
+	}
+	
+	dependencies {
+		classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
+	}
+}
 
-			if ( deployment.type == BuildType.RELEASE ) {
-				beforeDeployment { signing.signPom(it) }
-			}
+/*
+ * Everyone will use these so only say it once
+ */
+allprojects {
+	apply plugin: 'eclipse'
+	apply plugin: 'java'
+	
+	sourceCompatibility = 1.6
+	targetCompatibility = 1.6
+	
+	repositories {
+		mavenCentral()
+		maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
+	}
+}
 
-			addFilter("lwjgl") { artifact, file -> artifact.name == "lwjgl" }
-			addFilter("lwjgl-platform") { artifact, file -> artifact.name == "lwjgl-platform" }
+/*
+ * Generates and does all the things needed
+ */
+task generate(dependsOn: ':Generated:generate') {
+	description 'Generates the LWJGL 3 project code'
+}
 
-			pom("lwjgl", lwjglPOM("LWJGL", "jar"))
-			pom("lwjgl-platform", lwjglPOM("LWJGL Platform", "pom"))
+/*
+ * Allow for easy updating of the gradle wrapper by updating the version inside and running 'gradlew wrapper'
+ */
+task wrapper(type: Wrapper) {
+	gradleVersion = '2.12'
+}
+
+/*
+ * This sub-project contains all the different hand written java files for LWJGL 3
+ *
+ * I would prefer to have a different name but oh well
+ */
+project(':Core') {
+	
+	task copy(type: Copy) {
+		from new File(project(':Core').buildDir.getParent(), "/src")
+		into new File(project(':Generated').buildDir.getParent(), "/src")
+	}
+}
+
+/*
+ * The Generator sub-project contains everything to do with the generator. This project may
+ * have sub-projects of its own.
+ */
+project(':Generator') {
+	apply plugin: 'kotlin'
+	apply plugin: 'application'
+	
+	// In Kotlin files are renamed to "[package].[name]Kt" and not just "[package].[name]"
+	mainClassName = "org.lwjgl.generator.GeneratorKt"
+	
+	dependencies {
+		compile files(org.gradle.internal.jvm.Jvm.current().toolsJar) // need to include this for some of the sun packages in eclipse
+		compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
+	}
+	
+	run {
+	
+		def tplsrc = new File(project(':Generator').buildDir.getParent(), "/src/main/kotlin")
+		def genout = new File(project(':Generated').buildDir.getParent(), "/src/main")
+		if(!genout.exists()) {
+			println("MKDIR: " + genout)
+			genout.mkdirs()
 		}
+		
+		systemProperty "binding.egl", egl
+		systemProperty "binding.glfw", glfw
+		systemProperty "binding.jawt", jawt
+		systemProperty "binding.nanovg", nanovg
+		systemProperty "binding.nfd", nfd
+		systemProperty "binding.openal", openal
+		systemProperty "binding.opencl", opencl
+		systemProperty "binding.opengl", opengl
+		systemProperty "binding.opengles", opengles
+		systemProperty "binding.ovr", ovr
+		systemProperty "binding.par", par
+		systemProperty "binding.stb", stb
+		systemProperty "binding.vulkan", vulkan
+		systemProperty "binding.macosx.objc", macosxobjc
+		
+		args tplsrc
+		args genout
+		println args
 	}
 }
 
-task copyArchives(type: Copy) {
-	from "$PATHS.release/jar/lwjgl.jar", "$PATHS.release/src.zip", "$PATHS.release/doc/javadoc.zip"
-	destinationDir file(buildDir)
-	rename { it.replace(".zip", ".jar") }
-}
-signArchives.mustRunAfter copyArchives
-uploadArchives.dependsOn copyArchives
-
-[
-	[include: "*.dll", name: "Windows"],
-	[include: "*.so", name: "Linux"],
-	[include: "*.dylib", name: "MacOSX"]
-].each { archive ->
-	def zipNatives = task("zipNatives$archive.name", type: Zip) {
-		from "$PATHS.release/native"
-		include archive.include
-		archiveName "lwjgl-natives-${archive.name.toLowerCase()}.jar"
-		destinationDir file(buildDir)
+/*
+ * The Generated sub-project contains all the source files generated after the Generator runs as
+ * well as a copy of the Core project files.
+ */
+project(':Generated') {
+	
+	task generate(dependsOn: ':Generator:run') {
+		description 'Generates the LWJGL 3 project code'
 	}
-	signArchives.mustRunAfter zipNatives
-	uploadArchives.dependsOn zipNatives
+	
+	generate.dependsOn project(':Core').copy
 }

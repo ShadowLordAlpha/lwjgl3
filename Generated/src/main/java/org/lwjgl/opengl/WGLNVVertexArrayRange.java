@@ -1,0 +1,57 @@
+/*
+ * Copyright LWJGL. All rights reserved.
+ * License terms: http://lwjgl.org/license.php
+ * MACHINE GENERATED FILE, DO NOT EDIT
+ */
+package org.lwjgl.opengl;
+
+import java.nio.*;
+
+import org.lwjgl.system.*;
+
+import static org.lwjgl.system.Checks.*;
+import static org.lwjgl.system.JNI.*;
+import static org.lwjgl.system.MemoryUtil.*;
+
+public class WGLNVVertexArrayRange {
+
+	protected WGLNVVertexArrayRange() {
+		throw new UnsupportedOperationException();
+	}
+
+	static boolean isAvailable(GLCapabilities caps) {
+		return checkFunctions(
+			caps.wglAllocateMemoryNV, caps.wglFreeMemoryNV
+		);
+	}
+
+	// --- [ wglAllocateMemoryNV ] ---
+
+	/** Unsafe version of {@link #wglAllocateMemoryNV AllocateMemoryNV} */
+	public static long nwglAllocateMemoryNV(int size, float readfreq, float writefreq, float priority) {
+		long __functionAddress = GL.getCapabilities().wglAllocateMemoryNV;
+		if ( CHECKS )
+			checkFunctionAddress(__functionAddress);
+		return callIFFFP(__functionAddress, size, readfreq, writefreq, priority);
+	}
+
+	public static ByteBuffer wglAllocateMemoryNV(int size, float readfreq, float writefreq, float priority) {
+		long __result = nwglAllocateMemoryNV(size, readfreq, writefreq, priority);
+		return memByteBuffer(__result, size);
+	}
+
+	// --- [ wglFreeMemoryNV ] ---
+
+	/** Unsafe version of {@link #wglFreeMemoryNV FreeMemoryNV} */
+	public static void nwglFreeMemoryNV(long pointer) {
+		long __functionAddress = GL.getCapabilities().wglFreeMemoryNV;
+		if ( CHECKS )
+			checkFunctionAddress(__functionAddress);
+		callPV(__functionAddress, pointer);
+	}
+
+	public static void wglFreeMemoryNV(ByteBuffer pointer) {
+		nwglFreeMemoryNV(memAddress(pointer));
+	}
+
+}
