@@ -164,6 +164,7 @@ $RECYCLE.BIN/
 /nbproject/
 /bin
 /modules/core/src/generated
+src/
 /libs
 /wiki
 .gradle

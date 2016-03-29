@@ -1,5 +1,4 @@
 include ':Core'
 include ':Generator'
-include ':Generated'
 
 rootProject.name = 'LWJGL 3'

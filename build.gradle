@@ -32,11 +32,48 @@ allprojects {
 	}
 }
 
+dependencies {
+	compile files(org.gradle.internal.jvm.Jvm.current().toolsJar) // need to include this for some of the sun packages in eclipse
+	testCompile "org.testng:testng:$testngVersion"
+}
+
 /*
  * Generates and does all the things needed
  */
-task generate(dependsOn: ':Generated:generate') {
+task generate() {
+	dependsOn ':Generator:run'
+	dependsOn ':Core:copy'
 	description 'Generates the LWJGL 3 project code'
+}
+
+test {
+	// enable TestNG support (default is JUnit)
+	useTestNG() 
+}
+
+compileJava {
+	dependsOn ':generate'
+}
+
+jar {
+	baseName = "lwjgl"
+	version = lwjglVersion
+	
+	manifest {
+		attributes("Specification-Title": "Lightweight Java Game Library",
+					"Specification-Version": version,
+					"Specification-Vendor": "lwjgl.org",
+					"Implementation-Title": "lwjgl",
+					"Implementation-Version": "?-SNAPSHOT", // TODO: both values need to not be hardcoded
+					"Implementation-Vendor": "lwjgl.org")
+	}
+}
+
+/*
+ * Cleans generated code
+ */
+ clean{
+    delete "src/main"
 }
 
 /*
@@ -55,7 +92,13 @@ project(':Core') {
 	
 	task copy(type: Copy) {
 		from new File(project(':Core').buildDir.getParent(), "/src")
-		into new File(project(':Generated').buildDir.getParent(), "/src")
+		into new File(rootProject.buildDir.getParent(), "/src")
+	}
+	
+	dependencies {
+		compile rootProject
+		compile files(org.gradle.internal.jvm.Jvm.current().toolsJar) // need to include this for some of the sun packages in eclipse
+		testCompile "org.testng:testng:$testngVersion"
 	}
 }
 
@@ -78,7 +121,7 @@ project(':Generator') {
 	run {
 	
 		def tplsrc = new File(project(':Generator').buildDir.getParent(), "/src/main/kotlin")
-		def genout = new File(project(':Generated').buildDir.getParent(), "/src/main")
+		def genout = new File(rootProject.buildDir.getParent(), "/src/main")
 		if(!genout.exists()) {
 			println("MKDIR: " + genout)
 			genout.mkdirs()
@@ -103,17 +146,4 @@ project(':Generator') {
 		args genout
 		println args
 	}
-}
-
-/*
- * The Generated sub-project contains all the source files generated after the Generator runs as
- * well as a copy of the Core project files.
- */
-project(':Generated') {
-	
-	task generate(dependsOn: ':Generator:run') {
-		description 'Generates the LWJGL 3 project code'
-	}
-	
-	generate.dependsOn project(':Core').copy
 }
