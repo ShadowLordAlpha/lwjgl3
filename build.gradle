@@ -37,8 +37,67 @@ dependencies {
 }
 
 task copy(type: Copy) {
-	from new File(rootProject.buildDir.getParent(), "/src/core")
-	into new File(rootProject.buildDir.getParent(), "/src/main")
+	
+	from new File(rootProject.buildDir.getParent(), "/src/core/java")
+	// This stops files from being copied from core to main if we don't want them.
+	// There is probably a nicer looking way to do this
+	if(!Boolean.parseBoolean(egl)) {
+		logger.quiet('Excluding EGL from copy')
+		exclude 'org/lwjgl/egl/**'
+	}
+	if(!Boolean.parseBoolean(glfw)) {
+		logger.quiet('Excluding GLFW from copy')
+		exclude 'org/lwjgl/glfw/**'
+	}
+	if(!Boolean.parseBoolean(jawt)) {
+		logger.quiet('Excluding JAWT from copy')
+		exclude 'org/lwjgl/system/jawt/**'
+	}
+	if(!Boolean.parseBoolean(nanovg)) {
+		logger.quiet('Excluding NANOVG from copy')
+		exclude 'org/lwjgl/nanovg/**'
+	}
+	if(!Boolean.parseBoolean(nfd)) {
+		logger.quiet('Excluding NFD from copy')
+		exclude 'org/lwjgl/nfd/**'
+	}
+	if(!Boolean.parseBoolean(openal)) {
+		logger.quiet('Excluding OPENAL from copy')
+		exclude 'org/lwjgl/openal/**'
+	}
+	if(!Boolean.parseBoolean(opencl)) {
+		logger.info('Excluding OPENCL from copy')
+		exclude 'org/lwjgl/opencl/**'
+	}
+	if(!Boolean.parseBoolean(opengl)) {
+		logger.info('Excluding OPENGL from copy')
+		exclude 'org/lwjgl/opengl/**'
+	}
+	if(!Boolean.parseBoolean(opengles)) {
+		logger.info('Excluding OPENGLES from copy')
+		exclude 'org/lwjgl/opengles/**'
+	}
+	if(!Boolean.parseBoolean(ovr)) {
+		logger.info('Excluding OVR from copy')
+		exclude 'org/lwjgl/ovr/**'
+	}
+	if(!Boolean.parseBoolean(par)) {
+		logger.info('Excluding PAR from copy')
+		exclude 'org/lwjgl/util/par/**'
+	}
+	if(!Boolean.parseBoolean(stb)) {
+		logger.info('Excluding STB from copy')	
+		exclude 'org/lwjgl/stb/**'
+	}
+	if(!Boolean.parseBoolean(vulkan)) {
+		logger.quiet('Excluding VULKAN from copy')
+		exclude 'org/lwjgl/vulkan/**'
+	}
+	if(!Boolean.parseBoolean(macosxobjc)) {
+		logger.quiet('Excluding MACOSXOBJC from copy')
+		exclude 'org/lwjgl/system/macosx/**'
+	}
+	into new File(rootProject.buildDir.getParent(), "/src/main/java")
 }
 
 jar {
@@ -46,12 +105,134 @@ jar {
 	version = "$lwjglVersion"
 }
 
+// This task should be changed when switching over to non-compiled templates.
+task templates(type: Sync) {
+	from new File(rootProject.buildDir.getParent(), "/src/generator/kotlin")
+	exclude 'org/lwjgl/generator/**'
+	if(!Boolean.parseBoolean(egl)) {
+		logger.quiet('Excluding EGL from templates')
+		exclude 'org/lwjgl/egl/**'
+	}
+	if(!Boolean.parseBoolean(glfw)) {
+		logger.quiet('Excluding GLFW from templates')
+		exclude 'org/lwjgl/glfw/**'
+	}
+	if(!Boolean.parseBoolean(jawt)) {
+		logger.quiet('Excluding JAWT from templates')
+		exclude 'org/lwjgl/system/jawt/**'
+	}
+	if(!Boolean.parseBoolean(nanovg)) {
+		logger.quiet('Excluding NANOVG from templates')
+		exclude 'org/lwjgl/nanovg/**'
+	}
+	if(!Boolean.parseBoolean(nfd)) {
+		logger.quiet('Excluding NFD from templates')
+		exclude 'org/lwjgl/nfd/**'
+	}
+	if(!Boolean.parseBoolean(openal)) {
+		logger.quiet('Excluding OPENAL from templates')
+		exclude 'org/lwjgl/openal/**'
+	}
+	if(!Boolean.parseBoolean(opencl)) {
+		logger.quiet('Excluding OPENCL from templates')
+		exclude 'org/lwjgl/opencl/**'
+	}
+	if(!Boolean.parseBoolean(opengl)) {
+		logger.quiet('Excluding OPENGL from templates')
+		exclude 'org/lwjgl/opengl/**'
+	}
+	if(!Boolean.parseBoolean(opengles)) {
+		logger.quiet('Excluding OPENGLES from templates')
+		exclude 'org/lwjgl/opengles/**'
+	}
+	if(!Boolean.parseBoolean(ovr)) {
+		logger.quiet('Excluding OVR from templates')
+		exclude 'org/lwjgl/ovr/**'
+	}
+	if(!Boolean.parseBoolean(par)) {
+		logger.quiet('Excluding PAR from templates')
+		exclude 'org/lwjgl/util/par/**'
+	}
+	if(!Boolean.parseBoolean(stb)) {
+		logger.quiet('Excluding STB from templates')	
+		exclude 'org/lwjgl/stb/**'
+	}
+	if(!Boolean.parseBoolean(vulkan)) {
+		logger.quiet('Excluding VULKAN from templates')
+		exclude 'org/lwjgl/vulkan/**'
+	}
+	if(!Boolean.parseBoolean(macosxobjc)) {
+		logger.quiet('Excluding MACOSXOBJC from templates')
+		exclude 'org/lwjgl/system/macosx/**'
+	}
+	into new File(rootProject.buildDir.getParent(), "/src/generator/resources")
+}
+
+compileGeneratorKotlin {
+	if(!Boolean.parseBoolean(egl)) {
+		logger.quiet('Excluding EGL from kotlin compile')
+		exclude 'org/lwjgl/egl/**'
+	}
+	if(!Boolean.parseBoolean(glfw)) {
+		logger.quiet('Excluding GLFW from kotlin compile')
+		exclude 'org/lwjgl/glfw/**'
+	}
+	if(!Boolean.parseBoolean(jawt)) {
+		logger.quiet('Excluding JAWT from kotlin compile')
+		exclude 'org/lwjgl/system/jawt/**'
+	}
+	if(!Boolean.parseBoolean(nanovg)) {
+		logger.quiet('Excluding NANOVG from kotlin compile')
+		exclude 'org/lwjgl/nanovg/**'
+	}
+	if(!Boolean.parseBoolean(nfd)) {
+		logger.quiet('Excluding NFD from kotlin compile')
+		exclude 'org/lwjgl/nfd/**'
+	}
+	if(!Boolean.parseBoolean(openal)) {
+		logger.quiet('Excluding OPENAL from kotlin compile')
+		exclude 'org/lwjgl/openal/**'
+	}
+	if(!Boolean.parseBoolean(opencl)) {
+		logger.quiet('Excluding OPENCL from kotlin compile')
+		exclude 'org/lwjgl/opencl/**'
+	}
+	if(!Boolean.parseBoolean(opengl)) {
+		logger.quiet('Excluding OPENGL from kotlin compile')
+		exclude 'org/lwjgl/opengl/**'
+	}
+	if(!Boolean.parseBoolean(opengles)) {
+		logger.quiet('Excluding OPENGLES from kotlin compile')
+		exclude 'org/lwjgl/opengles/**'
+	}
+	if(!Boolean.parseBoolean(ovr)) {
+		logger.quiet('Excluding OVR from kotlin compile')
+		exclude 'org/lwjgl/ovr/**'
+	}
+	if(!Boolean.parseBoolean(par)) {
+		logger.quiet('Excluding PAR from kotlin compile')
+		exclude 'org/lwjgl/util/par/**'
+	}
+	if(!Boolean.parseBoolean(stb)) {
+		logger.quiet('Excluding STB from kotlin compile')	
+		exclude 'org/lwjgl/stb/**'
+	}
+	if(!Boolean.parseBoolean(vulkan)) {
+		logger.quiet('Excluding VULKAN from kotlin compile')
+		exclude 'org/lwjgl/vulkan/**'
+	}
+	if(!Boolean.parseBoolean(macosxobjc)) {
+		logger.quiet('Excluding MACOSXOBJC from kotlin compile')
+		exclude 'org/lwjgl/system/macosx/**'
+	}
+}
+
 run {
 	classpath = sourceSets.generator.runtimeClasspath
 	println classpath
 	main = "org.lwjgl.generator.GeneratorKt"
 	
-	def tplsrc = new File(rootProject.buildDir.getParent(), "/src/generator/kotlin")
+	def tplsrc = new File(rootProject.buildDir.getParent(), "/src/generator/resources")
 	def genout = new File(rootProject.buildDir.getParent(), "/src/main")
 	if(!genout.exists()) {
 		println("MKDIR: " + genout)
@@ -77,6 +258,11 @@ run {
 	args genout
 	println args
 }
+// configure task stuff
+run.dependsOn compileGeneratorKotlin
+run.mustRunAfter compileGeneratorKotlin
+compileGeneratorKotlin.dependsOn templates
+compileGeneratorKotlin.mustRunAfter templates
 
 /*
  * This is just a utility task that allows easier updating of gradle.

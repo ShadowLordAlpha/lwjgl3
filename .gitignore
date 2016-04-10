@@ -2,7 +2,7 @@
 
 ### Java ###
 *.class
-# I ignore the src/main directory for this github
+# I ignore the src/main directory for this github as it is just generated code
 src/main/**
 
 # Mobile Tools for Java (J2ME)
