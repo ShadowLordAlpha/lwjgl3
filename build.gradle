@@ -1,149 +1,86 @@
 /*
- * Copyright LWJGL. All rights reserved.
- * License terms: http://lwjgl.org/license.php
+ * Use whatever header you want here really. I don't care
  */
-project.buildDir = 'bin/MAVEN'
-
-apply plugin: "maven"
-apply plugin: "signing"
-
-project.group = "org.lwjgl"
-project.version = lwjglVersion
-
-def PATHS = [
-	release: 'bin/RELEASE'
-]
-
-// Set build variables based on build type (release, continuous integration, development)
-enum BuildType {
-	LOCAL,
-	SNAPSHOT,
-	RELEASE
-}
-
-class Deployment {
-	BuildType type
-	String repo
-	String user
-	String password
-}
-
-Deployment deployment;
-if ( hasProperty("release") ) {
-	deployment = new Deployment(
-		type: BuildType.RELEASE,
-		repo: "https://oss.sonatype.org/service/local/staging/deploy/maven2/",
-		user: sonatypeUsername,
-		password: sonatypePassword
-	)
-	println "Performing release build"
-} else if ( hasProperty("snapshot") ) {
-	project.version += "-SNAPSHOT"
-	deployment = new Deployment(
-		type: BuildType.SNAPSHOT,
-		repo: "https://oss.sonatype.org/content/repositories/snapshots/",
-		user: sonatypeUsername,
-		password: sonatypePassword
-	)
-	println "Performing snapshot build"
-} else {
-	deployment = new Deployment(
-		type: BuildType.LOCAL,
-		repo: repositories.mavenLocal().url
-	)
-}
-println "${deployment.type.name()} BUILD"
-
-artifacts {
-	archives file: file("$buildDir/lwjgl.jar"), name: "lwjgl", type: "jar"
-	archives file: file("$buildDir/src.jar"), name: "lwjgl", type: "jar", classifier: "sources"
-	archives file: file("$buildDir/javadoc.jar"), name: "lwjgl", type: "jar", classifier: "javadoc"
-	archives file: file("$buildDir/lwjgl-natives-windows.jar"), name: "lwjgl-platform", type: "jar", classifier: "natives-windows"
-	archives file: file("$buildDir/lwjgl-natives-macosx.jar"), name: "lwjgl-platform", type: "jar", classifier: "natives-osx"
-	archives file: file("$buildDir/lwjgl-natives-linux.jar"), name: "lwjgl-platform", type: "jar", classifier: "natives-linux"
-}
-
-if ( deployment.type == BuildType.RELEASE ) {
-	signing {
-		sign configurations.archives
-	}
-} else {
-	task signArchives {
-		// do nothing
-	}
-}
-
-def lwjglPOM = { String projectName, String packagingMethod ->
-	return {
-		project {
-			name projectName
-			packaging packagingMethod
-			description 'LWJGL'
-			url 'http://www.lwjgl.org'
-
-			scm {
-				url 'scm:git@github.com:LWJGL/lwjgl3.git'
-				connection 'scm:git@github.com:LWJGL/lwjgl3.git'
-				developerConnection 'scm:git@github.com:LWJGL/lwjgl3.git'
-			}
-
-			licenses {
-				license {
-					name 'BSD'
-					url 'http://www.lwjgl.org/license'
-					distribution 'repo'
-				}
-			}
-
-			developers {
-				developer {
-					id "spasi"
-					name "Ioannis Tsakpinis"
-				}
-			}
-		}
-	}
-}
-
-uploadArchives {
+ 
+ buildscript {
 	repositories {
-		mavenDeployer {
-			repository(url: deployment.repo) {
-				authentication(userName: deployment.user, password: deployment.password)
-			}
-
-			if ( deployment.type == BuildType.RELEASE ) {
-				beforeDeployment { signing.signPom(it) }
-			}
-
-			addFilter("lwjgl") { artifact, file -> artifact.name == "lwjgl" }
-			addFilter("lwjgl-platform") { artifact, file -> artifact.name == "lwjgl-platform" }
-
-			pom("lwjgl", lwjglPOM("LWJGL", "jar"))
-			pom("lwjgl-platform", lwjglPOM("LWJGL Platform", "pom"))
-		}
+		mavenCentral()
+	}
+	
+	dependencies {
+		classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
 	}
 }
 
-task copyArchives(type: Copy) {
-	from "$PATHS.release/jar/lwjgl.jar", "$PATHS.release/src.zip", "$PATHS.release/doc/javadoc.zip"
-	destinationDir file(buildDir)
-	rename { it.replace(".zip", ".jar") }
-}
-signArchives.mustRunAfter copyArchives
-uploadArchives.dependsOn copyArchives
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'kotlin'
+apply plugin: 'application'
 
-[
-	[include: "*.dll", name: "Windows"],
-	[include: "*.so", name: "Linux"],
-	[include: "*.dylib", name: "MacOSX"]
-].each { archive ->
-	def zipNatives = task("zipNatives$archive.name", type: Zip) {
-		from "$PATHS.release/native"
-		include archive.include
-		archiveName "lwjgl-natives-${archive.name.toLowerCase()}.jar"
-		destinationDir file(buildDir)
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+sourceSets {
+	generator
+	core
+}
+
+repositories {
+	mavenCentral()
+	maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
+}
+
+dependencies {
+	//runtime files(org.gradle.internal.jvm.Jvm.current().toolsJar)
+	generatorCompile files(org.gradle.internal.jvm.Jvm.current().toolsJar) // need to include this for some of the sun packages in eclipse
+	generatorCompile "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
+}
+
+task copy(type: Copy) {
+	from new File(rootProject.buildDir.getParent(), "/src/core")
+	into new File(rootProject.buildDir.getParent(), "/src/main")
+}
+
+jar {
+	baseName = 'lwjgl'
+	version = "$lwjglVersion"
+}
+
+run {
+	classpath = sourceSets.generator.runtimeClasspath
+	println classpath
+	main = "org.lwjgl.generator.GeneratorKt"
+	
+	def tplsrc = new File(rootProject.buildDir.getParent(), "/src/generator/kotlin")
+	def genout = new File(rootProject.buildDir.getParent(), "/src/main")
+	if(!genout.exists()) {
+		println("MKDIR: " + genout)
+		genout.mkdirs()
 	}
-	signArchives.mustRunAfter zipNatives
-	uploadArchives.dependsOn zipNatives
+	
+	systemProperty "binding.egl", egl
+	systemProperty "binding.glfw", glfw
+	systemProperty "binding.jawt", jawt
+	systemProperty "binding.nanovg", nanovg
+	systemProperty "binding.nfd", nfd
+	systemProperty "binding.openal", openal
+	systemProperty "binding.opencl", opencl
+	systemProperty "binding.opengl", opengl
+	systemProperty "binding.opengles", opengles
+	systemProperty "binding.ovr", ovr
+	systemProperty "binding.par", par
+	systemProperty "binding.stb", stb
+	systemProperty "binding.vulkan", vulkan
+	systemProperty "binding.macosx.objc", macosxobjc
+	
+	args tplsrc
+	args genout
+	println args
+}
+
+/*
+ * This is just a utility task that allows easier updating of gradle.
+ */
+task wrapper(type: Wrapper) {
+	gradleVersion = '2.12'
 }
